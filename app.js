@@ -1,12 +1,27 @@
 const SAMPLES = {
-  fib: `def fib(n):
+  leetcode: {
+    code: `class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        dict_ = {}
+        for i in range(len(nums)):
+            reminder = target - nums[i]
+            if reminder in dict_:
+                return [i, dict_[reminder]]
+            dict_[nums[i]] = i
+        return None
+`,
+    driver: `print(Solution().twoSum([2, 7, 11, 15], 9))`,
+  },
+  fib: {
+    code: `def fib(n):
     if n <= 1:
         return n
     return fib(n - 1) + fib(n - 2)
-
-print(fib(6))
 `,
-  bubble: `def bubble_sort(nums):
+    driver: `print(fib(6))`,
+  },
+  bubble: {
+    code: `def bubble_sort(nums):
     n = len(nums)
     for i in range(n):
         swapped = False
@@ -17,10 +32,11 @@ print(fib(6))
         if not swapped:
             break
     return nums
-
-print(bubble_sort([5, 1, 4, 2, 8]))
 `,
-  binary: `def binary_search(nums, target):
+    driver: `print(bubble_sort([5, 1, 4, 2, 8]))`,
+  },
+  binary: {
+    code: `def binary_search(nums, target):
     left, right = 0, len(nums) - 1
     while left <= right:
         mid = (left + right) // 2
@@ -31,28 +47,44 @@ print(bubble_sort([5, 1, 4, 2, 8]))
         else:
             right = mid - 1
     return -1
-
-print(binary_search([1, 3, 5, 7, 9, 11], 9))
 `,
-  subsets: `def subsets(nums):
-    out = []
+    driver: `print(binary_search([1, 3, 5, 7, 9, 11], 9))`,
+  },
+  subsets: {
+    code: `class Solution:
+    def subsets(self, nums: List[int]) -> List[List[int]]:
+        out = []
 
-    def backtrack(start, path):
-        out.append(path[:])
-        for i in range(start, len(nums)):
-            path.append(nums[i])
-            backtrack(i + 1, path)
-            path.pop()
+        def backtrack(start, path):
+            out.append(path[:])
+            for i in range(start, len(nums)):
+                path.append(nums[i])
+                backtrack(i + 1, path)
+                path.pop()
 
-    backtrack(0, [])
-    return out
-
-print(subsets([1, 2, 3]))
+        backtrack(0, [])
+        return out
 `,
+    driver: `print(Solution().subsets([1, 2, 3]))`,
+  },
+  linked: {
+    code: `class Solution:
+    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        prev = None
+        while head:
+            nxt = head.next
+            head.next = prev
+            prev = head
+            head = nxt
+        return prev
+`,
+    driver: `print(Solution().reverseList(build_list([1, 2, 3, 4, 5])))`,
+  },
 };
 
 const el = (id) => document.getElementById(id);
 const editor = el("editor");
+const driver = el("driver");
 const viewer = el("viewer");
 const ribbon = el("ribbon");
 const bootDot = el("boot-dot");
@@ -64,12 +96,67 @@ let current = 0;
 let timer = null;
 let lineNodes = [];
 
-editor.value = SAMPLES.fib;
+loadSample("leetcode");
 
-el("sample").addEventListener("change", (e) => {
-  editor.value = SAMPLES[e.target.value];
+function loadSample(key) {
+  editor.value = SAMPLES[key].code;
+  driver.value = SAMPLES[key].driver;
   toEditMode();
+}
+
+el("sample").addEventListener("change", (e) => loadSample(e.target.value));
+
+/* ---------- guessing a call for pasted LeetCode code ---------- */
+
+function placeholderFor(name) {
+  const n = name.toLowerCase();
+  if (n === "head" || /^list\d?$/.test(n)) return "build_list([1, 2, 3])";
+  if (n === "root") return "build_tree([3, 9, 20, None, None, 15, 7])";
+  if (n.startsWith("nums") || n.startsWith("arr") || n === "prices" || n === "heights")
+    return "[2, 7, 11, 15]";
+  if (n === "matrix" || n === "grid" || n === "board") return "[[1, 2], [3, 4]]";
+  if (["target", "k", "n", "x", "amount", "capacity"].includes(n)) return "9";
+  if (["s", "t", "word", "text", "p"].includes(n) || n.includes("str")) return '"abc"';
+  if (n === "words" || n === "strs") return '["ab", "cd"]';
+  return "None";
+}
+
+function argsFrom(paramText) {
+  return paramText
+    .split(",")
+    .map((p) => p.split(":")[0].split("=")[0].trim())
+    .filter(Boolean)
+    .map(placeholderFor)
+    .join(", ");
+}
+
+function suggestDriver(source) {
+  const cls = source.match(/^\s*class\s+(\w+)/m);
+  if (cls) {
+    const methods = [...source.matchAll(/^\s*def\s+(\w+)\s*\(\s*self\s*,?([\s\S]*?)\)\s*(->[^:]*)?:/gm)];
+    const pick = methods.find((m) => !m[1].startsWith("_")) || methods[0];
+    if (pick) return `print(${cls[1]}().${pick[1]}(${argsFrom(pick[2])}))`;
+  }
+  const fn = source.match(/^def\s+(\w+)\s*\(([\s\S]*?)\)\s*(->[^:]*)?:/m);
+  if (fn) return `print(${fn[1]}(${argsFrom(fn[2])}))`;
+  return "";
+}
+
+el("suggest").addEventListener("click", () => {
+  const guess = suggestDriver(editor.value);
+  driver.value = guess || "# Could not find a function to call — write the call yourself";
+  driver.focus();
 });
+
+editor.addEventListener("blur", () => {
+  if (!driver.value.trim()) driver.value = suggestDriver(editor.value);
+});
+
+function fullSource() {
+  const body = editor.value.replace(/\s+$/, "");
+  const call = driver.value.trim();
+  return call ? body + "\n\n" + call + "\n" : body + "\n";
+}
 
 /* ---------- worker ---------- */
 
@@ -104,7 +191,7 @@ runBtn.addEventListener("click", () => {
   runBtn.disabled = true;
   runBtn.textContent = "Recording…";
   bootDot.className = "dot busy";
-  worker.postMessage({ type: "run", source: editor.value });
+  worker.postMessage({ type: "run", source: fullSource() });
 });
 
 /* ---------- results ---------- */
@@ -121,7 +208,7 @@ function consume(result) {
   spans = result.spans || {};
   current = 0;
 
-  renderSource(editor.value);
+  renderSource(fullSource());
   renderMetrics(result);
   renderGraph(result);
 
@@ -135,6 +222,7 @@ function consume(result) {
 
 function toTraceMode() {
   editor.hidden = true;
+  el("driver-row").hidden = true;
   viewer.hidden = false;
   el("edit").hidden = false;
   el("mode-tag").textContent = "replaying";
@@ -143,6 +231,7 @@ function toTraceMode() {
 function toEditMode() {
   stopPlaying();
   editor.hidden = false;
+  el("driver-row").hidden = false;
   viewer.hidden = true;
   el("edit").hidden = true;
   el("mode-tag").textContent = "editing";
@@ -336,7 +425,8 @@ function stopPlaying() {
 el("speed").addEventListener("input", () => { if (timer) { stopPlaying(); startPlaying(); } });
 
 document.addEventListener("keydown", (e) => {
-  if (document.activeElement === editor || !steps.length) return;
+  const typing = document.activeElement === editor || document.activeElement === driver;
+  if (typing || !steps.length) return;
   if (e.key === "ArrowRight") { stopPlaying(); seek(current + 1); e.preventDefault(); }
   if (e.key === "ArrowLeft") { stopPlaying(); seek(current - 1); e.preventDefault(); }
   if (e.key === " ") { timer ? stopPlaying() : startPlaying(); e.preventDefault(); }
