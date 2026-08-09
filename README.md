@@ -5,6 +5,25 @@ Paste Python, record the run, then scrub through every line it executed.
 No backend. CPython runs in the browser via Pyodide (WebAssembly), so the whole
 thing is static files on GitHub Pages and your code never leaves your machine.
 
+## LeetCode code works as-is
+
+Paste a `class Solution` straight from the problem page. A prelude runs before
+your code providing `List`, `Optional`, `Counter`, `deque`, `heapq`, `ListNode`,
+`TreeNode` and friends — everything LeetCode imports for you invisibly. It is
+compiled under its own filename, so your line numbers are untouched.
+
+Because LeetCode calls your method for you and a local run does not, use the
+**Test call** box under the editor:
+
+```python
+print(Solution().twoSum([2, 7, 11, 15], 9))
+```
+
+Press **Suggest** and it guesses one from your signature. For linked lists and
+trees, build inputs with `build_list([1,2,3])` and
+`build_tree([3,9,20,None,None,15,7])` — the same level-order format LeetCode uses.
+`ListNode` prints as `1 -> 2 -> 3` rather than an object address.
+
 ## What it does
 
 - **Records, then replays.** `sys.settrace` captures one entry per executed line
