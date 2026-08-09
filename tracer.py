@@ -15,20 +15,94 @@ FILENAME = "<user>"
 MAX_STEPS = 20000
 MAX_REPR = 160
 
+# Executed under its own filename before the user's code, so it is invisible to
+# the tracer and — critically — does not shift the user's line numbers by even
+# one. LeetCode provides all of this implicitly; locally it is a NameError.
+PRELUDE = '''
+from typing import List, Dict, Set, Tuple, Optional, Any, Union, Deque, DefaultDict
+import collections, heapq, math, bisect, itertools, functools, re, string
+from collections import defaultdict, deque, Counter, OrderedDict
+from functools import lru_cache
+
+try:
+    from functools import cache
+except ImportError:
+    cache = lru_cache(maxsize=None)
+
+
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+    def __repr__(self):
+        parts, node, seen = [], self, set()
+        while node is not None and len(parts) < 12:
+            if id(node) in seen:
+                parts.append("<cycle>")
+                break
+            seen.add(id(node))
+            parts.append(str(node.val))
+            node = node.next
+        if node is not None and len(parts) >= 12:
+            parts.append("...")
+        return " -> ".join(parts)
+
+
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+    def __repr__(self):
+        return "TreeNode(" + str(self.val) + ")"
+
+
+def build_list(values):
+    """build_list([1,2,3]) -> 1 -> 2 -> 3"""
+    head = None
+    for value in reversed(values):
+        head = ListNode(value, head)
+    return head
+
+
+def build_tree(values):
+    """build_tree([3,9,20,None,None,15,7]) from LeetCode level order."""
+    if not values:
+        return None
+    root = TreeNode(values[0])
+    queue = [root]
+    index = 1
+    while queue and index < len(values):
+        node = queue.pop(0)
+        if index < len(values) and values[index] is not None:
+            node.left = TreeNode(values[index])
+            queue.append(node.left)
+        index += 1
+        if index < len(values) and values[index] is not None:
+            node.right = TreeNode(values[index])
+            queue.append(node.right)
+        index += 1
+    return root
+'''
+
 
 class Tracer:
-    def __init__(self):
+    def __init__(self, hidden=(), class_names=()):
         self.steps = []
         self.edges = {}
         self.call_counts = {}
         self.stack = []
         self.max_depth = 1
         self.overflow = False
+        self.hidden = set(hidden)
+        self.class_names = set(class_names)
 
     def _snapshot(self, frame):
         out = {}
         for name, value in frame.f_locals.items():
-            if name.startswith("__"):
+            if name.startswith("__") or name in self.hidden:
                 continue
             try:
                 text = repr(value)
@@ -50,7 +124,7 @@ class Tracer:
         func = frame.f_code.co_name
 
         if event == "call":
-            if self.stack:
+            if self.stack and func not in self.class_names:
                 key = self.stack[-1] + "|" + func
                 self.edges[key] = self.edges.get(key, 0) + 1
                 self.call_counts[func] = self.call_counts.get(func, 0) + 1
@@ -100,9 +174,16 @@ def _static_edges(tree):
     def scan(scope, body):
         for stmt in body:
             for sub in ast.walk(stmt):
-                if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name):
-                    if sub.func.id in defined:
-                        edges.add((scope, sub.func.id))
+                if not isinstance(sub, ast.Call):
+                    continue
+                target = None
+                if isinstance(sub.func, ast.Name):
+                    target = sub.func.id
+                elif isinstance(sub.func, ast.Attribute):
+                    # self.dfs(...) and Solution().twoSum(...) both land here
+                    target = sub.func.attr
+                if target in defined:
+                    edges.add((scope, target))
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -170,12 +251,16 @@ def analyze(source):
 
     static_edges = _static_edges(tree)
     spans = _function_spans(tree)
-    tracer = Tracer()
     buffer = io.StringIO()
     error = None
 
     code = compile(source, FILENAME, "exec")
     globals_dict = {"__name__": "__main__"}
+    exec(compile(PRELUDE, "<prelude>", "exec"), globals_dict)
+    hidden = set(globals_dict.keys())
+
+    class_names = {n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)}
+    tracer = Tracer(hidden=hidden, class_names=class_names)
 
     sys.settrace(tracer.trace)
     try:
