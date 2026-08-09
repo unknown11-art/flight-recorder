@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Recorder — see your Python run</title>
+<meta name="description" content="Paste Python, record its execution, then scrub through every line it ran.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="dot" id="boot-dot"></span>
+    <h1>Flight recorder</h1>
+    <span class="tagline">Record a Python run, then scrub it</span>
+  </div>
+  <div class="bar-actions">
+    <select id="sample" aria-label="Load an example">
+      <option value="fib">Recursive fibonacci</option>
+      <option value="bubble">Bubble sort</option>
+      <option value="binary">Binary search</option>
+      <option value="subsets">Subsets (backtracking)</option>
+    </select>
+    <button id="run" class="primary" disabled>Starting Python…</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel code-panel">
+    <div class="panel-head">
+      <h2>Source</h2>
+      <span id="mode-tag" class="tag">editing</span>
+      <button id="edit" class="ghost" hidden>Back to editing</button>
+    </div>
+    <textarea id="editor" spellcheck="false" aria-label="Python source"></textarea>
+    <div id="viewer" class="viewer" hidden></div>
+  </section>
+
+  <section class="panel inspect-panel">
+    <div class="panel-head"><h2>This moment</h2></div>
+    <div id="now" class="now">
+      <p class="empty">Run something to start recording.</p>
+    </div>
+  </section>
+
+  <section class="panel ribbon-panel">
+    <div class="panel-head">
+      <h2>Depth ribbon</h2>
+      <span class="hint">Call-stack depth across the whole run. Click or drag to seek.</span>
+    </div>
+    <canvas id="ribbon" height="120"></canvas>
+    <div class="transport">
+      <button id="first" class="ghost" title="First step">&#124;&#9664;</button>
+      <button id="prev" class="ghost" title="Previous step">&#9664;</button>
+      <button id="play" class="primary" title="Play">Play</button>
+      <button id="next" class="ghost" title="Next step">&#9654;</button>
+      <button id="last" class="ghost" title="Last step">&#9654;&#124;</button>
+      <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Step position">
+      <span id="counter" class="counter">0 / 0</span>
+      <label class="speed">
+        Speed
+        <input id="speed" type="range" min="1" max="60" value="14" aria-label="Playback speed">
+      </label>
+    </div>
+  </section>
+
+  <section class="panel graph-panel">
+    <div class="panel-head">
+      <h2>Call graph</h2>
+      <span class="hint">Solid ran. Dashed never fired. Thickness is call count.</span>
+    </div>
+    <div id="graph"></div>
+  </section>
+
+  <section class="panel metrics-panel">
+    <div class="panel-head"><h2>Measured</h2></div>
+    <div id="metrics"><p class="empty">No recording yet.</p></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
