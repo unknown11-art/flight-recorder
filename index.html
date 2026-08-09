@@ -20,10 +20,12 @@
   </div>
   <div class="bar-actions">
     <select id="sample" aria-label="Load an example">
+      <option value="leetcode">Two Sum (LeetCode class)</option>
       <option value="fib">Recursive fibonacci</option>
       <option value="bubble">Bubble sort</option>
       <option value="binary">Binary search</option>
       <option value="subsets">Subsets (backtracking)</option>
+      <option value="linked">Reverse linked list</option>
     </select>
     <button id="run" class="primary" disabled>Starting Python…</button>
   </div>
@@ -37,6 +39,12 @@
       <button id="edit" class="ghost" hidden>Back to editing</button>
     </div>
     <textarea id="editor" spellcheck="false" aria-label="Python source"></textarea>
+    <div class="driver-row" id="driver-row">
+      <label for="driver">Test call</label>
+      <textarea id="driver" rows="2" spellcheck="false"
+        aria-label="Code that calls your solution"></textarea>
+      <button id="suggest" class="ghost" title="Guess a call from your code">Suggest</button>
+    </div>
     <div id="viewer" class="viewer" hidden></div>
   </section>
 
