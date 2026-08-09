@@ -188,3 +188,21 @@ main {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+.driver-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-top: 1px solid var(--line);
+  background: var(--raised);
+}
+.driver-row label {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); padding-top: 7px; white-space: nowrap;
+}
+#driver {
+  flex: 1; min-width: 0; resize: vertical;
+  background: var(--ink); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 6px 9px;
+  font-family: var(--mono); font-size: 13px; line-height: 1.6;
+}
+.driver-row button { padding: 6px 11px; font-size: 13px; }
